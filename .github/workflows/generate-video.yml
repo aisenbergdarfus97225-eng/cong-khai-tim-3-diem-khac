@@ -23,7 +23,7 @@ jobs:
         working-directory: private-source
 
     env:
-      PRIVATE_REPO: "truonghuynhhang-cell/tim-so-khac"
+      PRIVATE_REPO: "truonghieuman19-hub/3-diem-khac-biet"
       PRIVATE_REF: "main"
       PYTHONUNBUFFERED: "1"
       TOKENIZERS_PARALLELISM: "false"
