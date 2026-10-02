@@ -214,8 +214,6 @@ jobs:
               exit 1
             fi
           done
-            exit 1
-          fi
           if ! [[ "$YT_PRIVACY_STATUS" =~ ^(private|public|unlisted)$ ]]; then
             echo "YT_PRIVACY_STATUS must be private, public or unlisted; got: $YT_PRIVACY_STATUS"
             exit 1
