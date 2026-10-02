@@ -40,7 +40,6 @@ jobs:
       # extra-prompts.txt from top to bottom and skips exact lines already present
       # in public prompt-usage.txt.
       DF_GAME_COUNT: "3"
-      CPU_DREAMSHAPER_STEPS: "8"
       YT_PRIVACY_STATUS: "private"  # private | public | unlisted
 
       DF_COUNTDOWN_SECONDS: "90"
@@ -152,26 +151,7 @@ jobs:
       MIN_CHANGED_PIXEL_DELTA: "28.0"
       MIN_STRONG_CHANGE_RATIO: "0.15"
 
-      DIFFUSERS_BACKEND: "auto"
-      FLUX_FILL_MODEL: "black-forest-labs/FLUX.1-Fill-dev"
-      CPU_INPAINT_MODEL: "Lykon/dreamshaper-8-inpainting"
-      CPU_INPAINT_FALLBACK_MODEL: "sd2-community/stable-diffusion-2-inpainting"
-      SDXL_INPAINT_MODEL: "diffusers/stable-diffusion-xl-1.0-inpainting-0.1"
-      SD_INPAINT_MODEL: "sd2-community/stable-diffusion-2-inpainting"
-      INPAINT_SIZE: "320"
-      INPAINT_STEPS: "10"
-      CPU_DREAMSHAPER_SIZE: "320"
-      INPAINT_RETRIES: "2"
-      CPU_INPAINT_RETRIES: "1"
-      INPAINT_STRENGTH: "0.72"
-      MAX_INPAINT_CANDIDATES: "12"
 
-      CPU_PREFILTER_MIN_INTERIOR_RATIO: "0.18"
-      CPU_PREFILTER_MIN_FILL: "0.20"
-      CPU_PREFILTER_MIN_RETAINED_MASK: "0.62"
-      CPU_PREFILTER_MIN_BBOX_SIDE: "28"
-      CPU_PREFILTER_POOL_LIMIT: "18"
-      CPU_PREFILTER_STRUCTURAL_MIN_SCORE: "5.2"
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
       YT_UPLOAD_ENABLED: "true"
@@ -212,9 +192,13 @@ jobs:
         working-directory: .
         run: cp runner-control/mota.txt private-source/mota.txt
 
-      - name: Patch runtime resilience from private source
+      - name: Verify controlled production entrypoint
         working-directory: .
-        run: python private-source/runtime_resilience_patch.py private-source
+        run: |
+          test -f private-source/object_rule_engine.py
+          test -f private-source/production_controlled_runner.py
+          test -f private-source/vision_upgrade_hotfix_runner.py
+          echo "Controlled Object Rule Engine entrypoint present."
 
       - uses: actions/setup-python@v5
         with:
@@ -230,8 +214,6 @@ jobs:
               exit 1
             fi
           done
-          if ! [[ "$CPU_DREAMSHAPER_STEPS" =~ ^(7|8)$ ]]; then
-            echo "CPU_DREAMSHAPER_STEPS must be 7 or 8; got: $CPU_DREAMSHAPER_STEPS"
             exit 1
           fi
           if ! [[ "$YT_PRIVACY_STATUS" =~ ^(private|public|unlisted)$ ]]; then
@@ -248,12 +230,10 @@ jobs:
           from pathlib import Path
 
           files = (
-              'difference_forge_cf.py', 'video_presentation.py', 'closed_set_runner.py',
-              'siglip_florence_runner.py', 'advanced_runner.py', 'scene_intelligence_runner.py',
-              'cpu_optimized_runner.py', 'quality_diversity_runner.py',
-              'vision_upgrade_runner.py', 'vision_upgrade_hotfix_runner.py',
+              'difference_forge_cf.py', 'object_rule_engine.py',
+              'production_controlled_runner.py', 'video_presentation.py',
+              'closed_set_runner.py', 'vision_upgrade_hotfix_runner.py',
               'privacy_control_runner.py', 'sequence_control_runner.py',
-              'runtime_resilience_patch.py',
           )
           for name in files:
               path = Path(name)
@@ -264,7 +244,7 @@ jobs:
               except SyntaxError:
                   raise SystemExit('Python syntax check failed: ' + name) from None
 
-          for name in ('requirements.txt', 'mota.txt',
+          for name in ('requirements-controlled.txt', 'mota.txt',
                        'assets/fonts/ipaexg.ttf', 'assets/mascot/fox-sheet.webp',
                        'assets/tutorial/guide-A.webp', 'assets/tutorial/guide-B.webp',
                        'assets/tutorial/differences.json', 'assets/presentation/brain-orbit.webp'):
@@ -312,8 +292,8 @@ jobs:
           else
             python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           fi
-          python -m pip install -r requirements.txt
-          python -m py_compile difference_forge_cf.py video_presentation.py closed_set_runner.py siglip_florence_runner.py advanced_runner.py scene_intelligence_runner.py cpu_optimized_runner.py quality_diversity_runner.py vision_upgrade_runner.py vision_upgrade_hotfix_runner.py privacy_control_runner.py sequence_control_runner.py runtime_resilience_patch.py
+          python -m pip install -r requirements-controlled.txt
+          python -m py_compile difference_forge_cf.py object_rule_engine.py production_controlled_runner.py video_presentation.py closed_set_runner.py vision_upgrade_hotfix_runner.py privacy_control_runner.py sequence_control_runner.py
 
       - name: Generate and upload
         run: python sequence_control_runner.py
