@@ -1,162 +1,41 @@
-name: Generate video from private repo
+name: Generate number-pair video
 
 on:
-
-  
   workflow_dispatch:
+    inputs:
+      video_count:
+        description: Number of videos
+        required: false
+        default: "1"
+      seed:
+        description: Optional base seed
+        required: false
+        default: ""
+      yt_privacy_status:
+        description: YouTube privacy status
+        required: false
+        default: "private"
 
 permissions:
   contents: write
 
 concurrency:
-  group: spot-difference-${{ github.ref }}
+  group: number-pair-video-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   generate:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-
-    defaults:
-      run:
-        shell: bash
-        working-directory: private-source
-
     env:
       PRIVATE_REPO: "aisenbergdarfus97225-eng/tim-3-diem-khac"
       PRIVATE_REF: "main"
       PYTHONUNBUFFERED: "1"
-      TOKENIZERS_PARALLELISM: "false"
-      DIFFERENCE_FORGE_SEED: "${{ github.run_id }}-${{ github.run_attempt }}"
-
-      # ===== MAIN CONTROLS: EDIT ONLY THESE TWO VALUES FOR SEQUENCE STARTS =====
-      # Run number paired with TITLE_START. As titles advance from TITLE_START,
-      # the effective run number advances from SEQ_BASE_RUN by the same offset.
-      SEQ_BASE_RUN: "2"
-      # 1-based title catalog position where title progression begins.
-      TITLE_START: "1"
-
-      # Public repository supplies only the title catalog and description.
-      # Scene generation remains private.
-      DF_GAME_COUNT: "3"
-      YT_PRIVACY_STATUS: "private"  # private | public | unlisted
-
-      DF_COUNTDOWN_SECONDS: "90"
-      DF_REVEAL_SECONDS: "10"
-      DF_INTRO_SECONDS: "48"
-      DF_TRANSITION_SECONDS: "4.2"
-      DF_OUTRO_SECONDS: "38"
-      DF_OUTPUT_DIR: "dist"
-      DF_VIDEO_FILENAME: "spot-the-difference.mp4"
-      DF_WIDTH: "1920"
-      DF_HEIGHT: "1080"
-      DF_FPS: "24"
-
-      DF_GAME_RENDER_FPS: "8"
-      DF_NEON_BLINK_HZ: "2.6"
-      DF_IMAGE_SHAKE_INTERVAL: "30"
-      DF_IMAGE_SHAKE_DURATION: "0.85"
-      DF_IMAGE_SHAKE_AMPLITUDE: "14"
-
-      # Public repo contains catalogs, description and plain used-text history only.
       RUNNER_CONTROL_DIR: "${{ github.workspace }}/runner-control"
-
-      CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-      CF_MODEL: "@cf/black-forest-labs/flux-1-schnell"
-      CF_STEPS: "8"
-      CF_REQUEST_TIMEOUT: "180"
-      POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
-      POLLINATIONS_MODEL: "flux"
-      AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
-      AIHORDE_TIMEOUT: "600"
-      CF_STYLE_SUFFIX: >-
-        vivid cartoon animation illustration, bold deeply saturated colors, thick dark clean linework,
-        crisp hard edges, sharply separated recognizable objects, rich precise small details,
-        flat purposeful cel shading, strong local contrast, clean silhouettes, no pastel haze,
-        no blur, no text, no logo, no watermark, no split screen, no collage
-
-      MASK_MIN_AREA_RATIO: "0.012"
-      MASK_MAX_AREA_RATIO: "0.065"
-      FASTSAM_MODEL: "FastSAM-x.pt"
-      FASTSAM_IMGSZ: "1024"
-      FASTSAM_CONF: "0.4"
-      SAM2_MODEL: "facebook/sam2.1-hiera-small"
-      SAM2_REFINE_LIMIT: "8"
-      SAM2_MIN_FASTSAM_IOU: "0.25"
-      SAM2_MIN_MODEL_IOU: "0.45"
-      SAM2_MIN_BOX_CONTAINMENT: "0.78"
-      SAM2_UNLOAD_AFTER_REFINE: "true"
-
-      MASK_REFINE_KERNEL: "3"
-      MASK_REFINE_ERODE: "1"
-      MASK_MAX_HOLE_RATIO: "0.035"
-      SINGLE_OBJECT_ERODE_ITERS: "2"
-      SINGLE_OBJECT_MIN_ISLAND_AREA_RATIO: "0.08"
-      SINGLE_OBJECT_MIN_DOMINANT_ISLAND: "0.92"
-      SINGLE_OBJECT_MIN_RAW_DOMINANT: "0.90"
-      OBJECT_FILTER_MIN_AREA_RATIO: "0.006"
-      OBJECT_FILTER_MAX_AREA_RATIO: "0.075"
-      OBJECT_FILTER_MIN_FILL: "0.18"
-      OBJECT_FILTER_MIN_SOLIDITY: "0.50"
-      OBJECT_FILTER_MIN_COMPACTNESS: "0.040"
-      OBJECT_FILTER_MIN_EDGE: "0.0"
-      OBJECT_FILTER_MAX_ASPECT: "4.5"
-      MIN_ISOLATED_CANDIDATES: "3"
-      SCENE_REGEN_RETRIES: "3"
-
-      GROUNDING_DINO_MODEL: "IDEA-Research/grounding-dino-tiny"
-      GROUNDING_DINO_CPU_MODEL: "IDEA-Research/grounding-dino-tiny"
-      GROUNDING_DINO_GPU_MODEL: "IDEA-Research/grounding-dino-tiny"
-      GROUNDING_DINO_THRESHOLD: "0.22"
-      GROUNDING_PRIMARY_THRESHOLD: "0.22"
-      GROUNDING_RETRY_THRESHOLD: "0.17"
-      GROUNDING_TARGET_COUNT: "3"
-      GROUNDING_PRIMARY_LABEL_LIMIT: "16"
-      GROUNDING_RETRY_LABEL_LIMIT: "24"
-      GROUNDING_MIN_MASK_OVERLAP: "0.18"
-      GROUNDING_UNLOAD_AFTER_SCENE: "true"
-      CENTER_EXCLUSION_X: "0.12"
-      CENTER_EXCLUSION_Y: "0.13"
-      MAX_SELECTABLE_OBJECT_AREA: "0.055"
-      TARGET_OBJECT_AREA: "0.024"
-      MIN_DIFFERENCE_DISTANCE: "0.23"
-      SCENE_FUSED_MIN_SIGLIP: "0.010"
-      SCENE_FUSED_MIN_GROUNDING: "0.20"
-
-      SIGLIP2_CLASSIFIER_MODEL: "google/siglip2-base-patch16-512"
-      SIGLIP_BATCH_SIZE: "2"
-      SIGLIP_MIN_SCORE: "0.055"
-      SIGLIP_MIN_MARGIN: "0.004"
-      SIGLIP_REJECT_MARGIN: "0.010"
-      SIGLIP_SEMANTIC_MIN_RETAIN: "0.18"
-      FLORENCE_FALLBACK_ENABLED: "true"
-      FLORENCE_BASE_FT_MODEL: "florence-community/Florence-2-base-ft"
-      FLORENCE_LARGE_FT_MODEL: "florence-community/Florence-2-large-ft"
-      FLORENCE_LARGE_MIN_RAM_GB: "10"
-      FLORENCE_UNLOAD_AFTER_CLASSIFY: "true"
-      FLORENCE_MAX_FALLBACKS: "8"
-      SEMANTIC_TARGET_CANDIDATES: "8"
-      CLIP_CLASSIFY_LIMIT: "8"
-      SEMANTIC_TOP_K: "5"
-      SEMANTIC_TOP1_REJECT_CEILING: "0.30"
-      SEMANTIC_TOP1_REJECT_GAP: "0.10"
-      SEMANTIC_FALLBACK_TOPK: "2"
-      STRUCTURE_MIN_EDGE_RETAIN: "0.40"
-
-      MIN_EDIT_COLOR_DISTANCE: "95.0"
-      MIN_CLEAR_CHANGED_RATIO: "0.25"
-      MIN_CHANGE_COMPONENT_PURITY: "0.70"
-      MIN_CHANGED_PIXEL_DELTA: "28.0"
-      MIN_STRONG_CHANGE_RATIO: "0.15"
-
-
-      HF_TOKEN: ${{ secrets.HF_TOKEN }}
-
-      YT_UPLOAD_ENABLED: "true"
-      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
-      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
-      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+      VIDEO_COUNT: "${{ github.event.inputs.video_count || '1' }}"
+      VIDEO_SEED: "${{ github.event.inputs.seed || '' }}"
+      YT_PRIVACY_STATUS: "${{ github.event.inputs.yt_privacy_status || 'private' }}"
+      YT_UPLOAD_ENABLED: "${{ secrets.YT_UPLOAD_ENABLED || 'true' }}"
 
     steps:
       - name: Checkout public control repo
@@ -166,16 +45,13 @@ jobs:
           fetch-depth: 0
 
       - name: Check private checkout token
-        working-directory: .
         env:
           PRIVATE_REPO_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
         run: |
           if [ -z "$PRIVATE_REPO_TOKEN" ]; then
-            echo "::error::Add the PRIVATE_REPO_TOKEN Actions secret to this public repository."
+            echo "::error::Add PRIVATE_REPO_TOKEN to the public repository secrets."
             exit 1
           fi
-
-      
 
       - name: Checkout private source
         uses: actions/checkout@v4
@@ -185,7 +61,8 @@ jobs:
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           path: private-source
           fetch-depth: 1
-          persist-credentials: false
+          persist-credentials: true
+
       - name: Select next public title
         working-directory: .
         run: |
@@ -196,7 +73,6 @@ jobs:
           control = Path("runner-control")
           catalog = control / "extra-titles.txt"
           usage = control / "title-usage.txt"
-
           titles = [
               line.strip()
               for line in catalog.read_text(encoding="utf-8").splitlines()
@@ -207,159 +83,180 @@ jobs:
               for line in usage.read_text(encoding="utf-8").splitlines()
               if line.strip()
           }
-
-          start = int(os.environ["TITLE_START"])
-          if start < 1 or start > len(titles):
-              raise SystemExit(
-                  f"TITLE_START={start} exceeds title catalog size {len(titles)}"
-              )
-
+          start = 1
           selected = next(
               ((idx, title) for idx, title in enumerate(titles[start - 1:], start)
                if title not in used),
               None,
           )
           if selected is None:
-              raise SystemExit(
-                  f"No unused title remains at or after TITLE_START={start}"
-              )
-
-          title_index, title = selected
-          run_number = int(os.environ["SEQ_BASE_RUN"]) + (title_index - start)
-
-          Path("private-source/tieude.txt").write_text(
-              title + "\n", encoding="utf-8"
-          )
-          (control / ".selected-title.txt").write_text(
-              title + "\n", encoding="utf-8"
-          )
-
-          print(
-              f"[title] run={run_number} "
-              f"title_index={title_index}/{len(titles)} "
-              f"TITLE_START={start}"
-          )
-          print(f"[title] selected={title}")
+              raise SystemExit("No unused public title remains.")
+          idx, title = selected
+          Path("private-source/tieude.txt").write_text(title + "\n", encoding="utf-8")
+          (control / ".selected-title.txt").write_text(title + "\n", encoding="utf-8")
+          print(f"[title] index={idx}/{len(titles)}")
+          print(f"[title] {title}")
           PYCODE
 
       - name: Use public YouTube description
-        working-directory: .
         run: cp runner-control/mota.txt private-source/mota.txt
 
-      - name: Verify controlled production entrypoint
-        working-directory: .
+      - name: Validate number-pair private source
         run: |
-          test -f private-source/object_rule_engine.py
-          test -f private-source/production_controlled_runner.py
-          test -f private-source/vision_upgrade_hotfix_runner.py
-          echo "Controlled Object Rule Engine entrypoint present."
+          cd private-source
+          test -f generate_video.py
+          test -f puzzle_engine.py
+          test -f video_renderer.py
+          test -f config.json
+          test -f requirements.txt
+          test -f history/puzzles.jsonl
+          test -f history/videos.jsonl
+          test -f assets/fonts/ipaexg.ttf
+          test -f assets/mascot/fox-sheet.webp
+          test -f images/videonen.mp4
+          for i in $(seq 1 10); do test -f "music/$i.mp3"; done
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Validate public controls
-        run: |
-          for pair in "DF_GAME_COUNT=$DF_GAME_COUNT" "SEQ_BASE_RUN=$SEQ_BASE_RUN" "TITLE_START=$TITLE_START"; do
-            value="${pair#*=}"
-            name="${pair%%=*}"
-            if ! [[ "$value" =~ ^[1-9][0-9]*$ ]]; then
-              echo "$name must be a positive integer; got: $value"
-              exit 1
-            fi
-          done
-          if ! [[ "$YT_PRIVACY_STATUS" =~ ^(private|public|unlisted)$ ]]; then
-            echo "YT_PRIVACY_STATUS must be private, public or unlisted; got: $YT_PRIVACY_STATUS"
-            exit 1
-          fi
-          echo "games=$DF_GAME_COUNT run_base=$SEQ_BASE_RUN title_start=$TITLE_START title_catalog=public youtube=$YT_PRIVACY_STATUS"
-
-      - name: Validate private source, public catalogs and upload settings
-        run: |
-          python - <<'PYCODE'
-          import ast
-          import os
-          from pathlib import Path
-
-          files = (
-              'difference_forge_cf.py', 'object_rule_engine.py',
-              'production_controlled_runner.py', 'video_presentation.py',
-              'closed_set_runner.py', 'vision_upgrade_hotfix_runner.py',
-              'privacy_control_runner.py',
-          )
-          for name in files:
-              path = Path(name)
-              if not path.is_file():
-                  raise SystemExit('Missing private source file: ' + name)
-              try:
-                  ast.parse(path.read_text(encoding='utf-8'), filename=name)
-              except SyntaxError:
-                  raise SystemExit('Python syntax check failed: ' + name) from None
-
-          for name in ('requirements-controlled.txt', 'mota.txt',
-                       'assets/fonts/ipaexg.ttf', 'assets/mascot/fox-sheet.webp',
-                       'assets/presentation/brain-orbit.webp'):
-              if not Path(name).is_file():
-                  raise SystemExit('Missing private runtime input or asset: ' + name)
-
-          control = Path(os.environ['RUNNER_CONTROL_DIR'])
-          for name in ('extra-titles.txt', 'mota.txt', 'title-usage.txt'):
-              if not (control / name).is_file():
-                  raise SystemExit('Missing public control file: ' + name)
-
-          def active_lines(path):
-              return [
-                  line.strip() for line in path.read_text(encoding='utf-8').splitlines()
-                  if line.strip() and not line.lstrip().startswith('#')
-              ]
-
-          titles = active_lines(control / 'extra-titles.txt')
-          if len(titles) < 300:
-              raise SystemExit(f'extra-titles.txt must contain at least 300 titles; got {len(titles)}')
-          if len(set(titles)) != len(titles):
-              raise SystemExit('extra-titles.txt contains duplicate title lines')
-          if not (control / 'mota.txt').read_text(encoding='utf-8').strip():
-              raise SystemExit('Public mota.txt is empty')
-
-          if os.getenv('YT_UPLOAD_ENABLED', '').lower() == 'true':
-              missing = [name for name in ('YT_CLIENT_ID', 'YT_CLIENT_SECRET', 'YT_REFRESH_TOKEN')
-                         if not os.getenv(name, '').strip()]
-              if missing:
-                  raise SystemExit('Add Actions secrets to this public repository: ' + ', '.join(missing))
-          print(f'Public controls ready: titles={len(titles)}; description=mota.txt; title history=title-usage.txt.')
-          PYCODE
-
       - name: Install runtime
+        working-directory: private-source
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-cjk libgl1
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-cjk
           python -m pip install --upgrade pip
-          if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
-            python -m pip install torch torchvision
+          python -m pip install -r requirements.txt
+
+      - name: Validate project
+        working-directory: private-source
+        run: python tools/check_project.py
+
+      - name: Generate number-pair videos
+        working-directory: private-source
+        run: |
+          if [ -n "$VIDEO_SEED" ]; then
+            python generate_video.py --videos "$VIDEO_COUNT" --seed "$VIDEO_SEED"
           else
-            python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+            python generate_video.py --videos "$VIDEO_COUNT"
           fi
-          python -m pip install -r requirements-controlled.txt
-          python -m py_compile difference_forge_cf.py object_rule_engine.py production_controlled_runner.py video_presentation.py closed_set_runner.py vision_upgrade_hotfix_runner.py privacy_control_runner.py
 
-      - name: Generate and upload
-        run: python privacy_control_runner.py
+      - name: Upload videos to YouTube
+        if: env.YT_UPLOAD_ENABLED == 'true'
+        working-directory: private-source
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+        run: |
+          python - <<'PYCODE'
+          import json
+          import os
+          from pathlib import Path
+          import requests
 
-      - name: Commit updated title usage
+          client_id = os.environ["YT_CLIENT_ID"].strip()
+          client_secret = os.environ["YT_CLIENT_SECRET"].strip()
+          refresh = os.environ["YT_REFRESH_TOKEN"].strip()
+          if not all((client_id, client_secret, refresh)):
+              raise SystemExit("Missing YouTube OAuth secrets")
+
+          token = requests.post(
+              "https://oauth2.googleapis.com/token",
+              data={
+                  "client_id": client_id,
+                  "client_secret": client_secret,
+                  "refresh_token": refresh,
+                  "grant_type": "refresh_token",
+              },
+              timeout=60,
+          )
+          token.raise_for_status()
+          access_token = token.json()["access_token"]
+          headers = {"Authorization": f"Bearer {access_token}"}
+
+          for manifest in sorted(Path("dist").glob("numbers-pair-*.json")):
+              data = json.loads(manifest.read_text(encoding="utf-8"))
+              video = manifest.with_suffix(".mp4")
+              thumbnail = manifest.with_name(manifest.stem + "-thumbnail.jpg")
+              metadata = {
+                  "snippet": {
+                      "title": str(data["title"])[:100],
+                      "description": Path("mota.txt").read_text(encoding="utf-8")[:5000],
+                      "categoryId": "24",
+                  },
+                  "status": {
+                      "privacyStatus": os.environ["YT_PRIVACY_STATUS"],
+                      "selfDeclaredMadeForKids": False,
+                  },
+              }
+              init = requests.post(
+                  "https://www.googleapis.com/upload/youtube/v3/videos",
+                  params={"uploadType": "resumable", "part": "snippet,status"},
+                  headers={
+                      **headers,
+                      "Content-Type": "application/json; charset=UTF-8",
+                      "X-Upload-Content-Type": "video/mp4",
+                      "X-Upload-Content-Length": str(video.stat().st_size),
+                  },
+                  json=metadata,
+                  timeout=60,
+              )
+              init.raise_for_status()
+              location = init.headers["Location"]
+              with video.open("rb") as handle:
+                  upload = requests.put(
+                      location,
+                      headers={"Content-Type": "video/mp4", "Content-Length": str(video.stat().st_size)},
+                      data=handle,
+                      timeout=3600,
+                  )
+              upload.raise_for_status()
+              video_id = upload.json()["id"]
+              with thumbnail.open("rb") as handle:
+                  thumb = requests.post(
+                      "https://www.googleapis.com/upload/youtube/v3/thumbnails/set",
+                      params={"videoId": video_id, "uploadType": "multipart"},
+                      headers=headers,
+                      files={"media": ("thumbnail.jpg", handle, "image/jpeg")},
+                      timeout=180,
+                  )
+              thumb.raise_for_status()
+              print(f"[youtube] https://youtu.be/{video_id}")
+          PYCODE
+
+      - name: Commit private generation history
+        working-directory: private-source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add history/puzzles.jsonl history/videos.jsonl
+          if git diff --cached --quiet; then
+            echo "No private history changes."
+            exit 0
+          fi
+          git commit -m "Update number-pair generation history [skip ci]"
+          git push origin HEAD:main
+
+      - name: Commit used public title
         working-directory: runner-control
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin "${GITHUB_REF_NAME}"
-
           selected_title="$(cat .selected-title.txt)"
           grep -Fxq "$selected_title" title-usage.txt || printf '%s\n' "$selected_title" >> title-usage.txt
           rm -f .selected-title.txt
-
           git add title-usage.txt
           if git diff --cached --quiet; then
-            echo "No title usage-state changes to commit."
+            echo "No public title usage change."
             exit 0
           fi
           git commit -m "Update used title history [skip ci]"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin HEAD:main
+
+      - name: Upload generated artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: number-pair-videos-${{ github.run_number }}
+          path: private-source/dist/
+          if-no-files-found: error
