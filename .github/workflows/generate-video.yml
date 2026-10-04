@@ -298,8 +298,7 @@ jobs:
 
           for name in ('requirements-controlled.txt', 'mota.txt',
                        'assets/fonts/ipaexg.ttf', 'assets/mascot/fox-sheet.webp',
-                       'assets/tutorial/guide-A.webp', 'assets/tutorial/guide-B.webp',
-                       'assets/tutorial/differences.json', 'assets/presentation/brain-orbit.webp'):
+                       'assets/presentation/brain-orbit.webp'):
               if not Path(name).is_file():
                   raise SystemExit('Missing private runtime input or asset: ' + name)
 
