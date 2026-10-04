@@ -37,7 +37,7 @@ jobs:
       TITLE_START: "1"
 
       # Public repository supplies only the title catalog and description.
-      # Scene prompts remain private.
+      # Scene generation remains private.
       DF_GAME_COUNT: "3"
       YT_PRIVACY_STATUS: "private"  # private | public | unlisted
 
@@ -272,7 +272,7 @@ jobs:
             echo "YT_PRIVACY_STATUS must be private, public or unlisted; got: $YT_PRIVACY_STATUS"
             exit 1
           fi
-          echo "games=$DF_GAME_COUNT run_base=$SEQ_BASE_RUN title_start=$TITLE_START prompt_antidup=public-usage-file youtube=$YT_PRIVACY_STATUS"
+          echo "games=$DF_GAME_COUNT run_base=$SEQ_BASE_RUN title_start=$TITLE_START title_catalog=public youtube=$YT_PRIVACY_STATUS"
 
       - name: Validate private source, public catalogs and upload settings
         run: |
