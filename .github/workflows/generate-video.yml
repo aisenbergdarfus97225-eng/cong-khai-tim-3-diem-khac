@@ -36,9 +36,8 @@ jobs:
       # 1-based title catalog position where title progression begins.
       TITLE_START: "1"
 
-      # Prompts have no private state and no hash/index state. The runner scans
-      # extra-prompts.txt from top to bottom and skips exact lines already present
-      # in public prompt-usage.txt.
+      # Public repository supplies only the title catalog and description.
+      # Scene prompts remain private.
       DF_GAME_COUNT: "3"
       YT_PRIVACY_STATUS: "private"  # private | public | unlisted
 
@@ -187,6 +186,61 @@ jobs:
           path: private-source
           fetch-depth: 1
           persist-credentials: false
+      - name: Select next public title
+        working-directory: .
+        run: |
+          python - <<'PYCODE'
+          import os
+          from pathlib import Path
+
+          control = Path("runner-control")
+          catalog = control / "extra-titles.txt"
+          usage = control / "title-usage.txt"
+
+          titles = [
+              line.strip()
+              for line in catalog.read_text(encoding="utf-8").splitlines()
+              if line.strip() and not line.lstrip().startswith("#")
+          ]
+          used = {
+              line.strip()
+              for line in usage.read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          }
+
+          start = int(os.environ["TITLE_START"])
+          if start < 1 or start > len(titles):
+              raise SystemExit(
+                  f"TITLE_START={start} exceeds title catalog size {len(titles)}"
+              )
+
+          selected = next(
+              ((idx, title) for idx, title in enumerate(titles[start - 1:], start)
+               if title not in used),
+              None,
+          )
+          if selected is None:
+              raise SystemExit(
+                  f"No unused title remains at or after TITLE_START={start}"
+              )
+
+          title_index, title = selected
+          run_number = int(os.environ["SEQ_BASE_RUN"]) + (title_index - start)
+
+          Path("private-source/tieude.txt").write_text(
+              title + "\n", encoding="utf-8"
+          )
+          (control / ".selected-title.txt").write_text(
+              title + "\n", encoding="utf-8"
+          )
+
+          print(
+              f"[title] run={run_number} "
+              f"title_index={title_index}/{len(titles)} "
+              f"TITLE_START={start}"
+          )
+          print(f"[title] selected={title}")
+          PYCODE
 
       - name: Use public YouTube description
         working-directory: .
@@ -231,7 +285,7 @@ jobs:
               'difference_forge_cf.py', 'object_rule_engine.py',
               'production_controlled_runner.py', 'video_presentation.py',
               'closed_set_runner.py', 'vision_upgrade_hotfix_runner.py',
-              'privacy_control_runner.py', 'sequence_control_runner.py',
+              'privacy_control_runner.py',
           )
           for name in files:
               path = Path(name)
@@ -250,8 +304,7 @@ jobs:
                   raise SystemExit('Missing private runtime input or asset: ' + name)
 
           control = Path(os.environ['RUNNER_CONTROL_DIR'])
-          for name in ('extra-titles.txt', 'extra-prompts.txt', 'mota.txt',
-                       'title-usage.txt', 'prompt-usage.txt'):
+          for name in ('extra-titles.txt', 'mota.txt', 'title-usage.txt'):
               if not (control / name).is_file():
                   raise SystemExit('Missing public control file: ' + name)
 
@@ -262,13 +315,10 @@ jobs:
               ]
 
           titles = active_lines(control / 'extra-titles.txt')
-          prompts = active_lines(control / 'extra-prompts.txt')
           if len(titles) < 300:
               raise SystemExit(f'extra-titles.txt must contain at least 300 titles; got {len(titles)}')
-          if not prompts:
-              raise SystemExit('extra-prompts.txt must contain at least 1 prompt')
-          if len(set(prompts)) != len(prompts):
-              raise SystemExit('extra-prompts.txt contains duplicate prompt lines')
+          if len(set(titles)) != len(titles):
+              raise SystemExit('extra-titles.txt contains duplicate title lines')
           if not (control / 'mota.txt').read_text(encoding='utf-8').strip():
               raise SystemExit('Public mota.txt is empty')
 
@@ -277,7 +327,7 @@ jobs:
                          if not os.getenv(name, '').strip()]
               if missing:
                   raise SystemExit('Add Actions secrets to this public repository: ' + ', '.join(missing))
-          print(f'Public catalogs ready: titles={len(titles)} prompts={len(prompts)}; plain usage tracking active.')
+          print(f'Public controls ready: titles={len(titles)}; description=mota.txt; title history=title-usage.txt.')
           PYCODE
 
       - name: Install runtime
@@ -291,21 +341,26 @@ jobs:
             python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           fi
           python -m pip install -r requirements-controlled.txt
-          python -m py_compile difference_forge_cf.py object_rule_engine.py production_controlled_runner.py video_presentation.py closed_set_runner.py vision_upgrade_hotfix_runner.py privacy_control_runner.py sequence_control_runner.py
+          python -m py_compile difference_forge_cf.py object_rule_engine.py production_controlled_runner.py video_presentation.py closed_set_runner.py vision_upgrade_hotfix_runner.py privacy_control_runner.py
 
       - name: Generate and upload
-        run: python sequence_control_runner.py
+        run: python privacy_control_runner.py
 
-      - name: Commit updated title and prompt usage
+      - name: Commit updated title usage
         working-directory: runner-control
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add title-usage.txt prompt-usage.txt
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+
+          selected_title="$(cat .selected-title.txt)"
+          grep -Fxq "$selected_title" title-usage.txt || printf '%s\n' "$selected_title" >> title-usage.txt
+          rm -f .selected-title.txt
+
+          git add title-usage.txt
           if git diff --cached --quiet; then
-            echo "No usage-state changes to commit."
+            echo "No title usage-state changes to commit."
             exit 0
           fi
-          git commit -m "Update used titles and prompts [skip ci]"
-          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git commit -m "Update used title history [skip ci]"
           git push origin "HEAD:${GITHUB_REF_NAME}"
