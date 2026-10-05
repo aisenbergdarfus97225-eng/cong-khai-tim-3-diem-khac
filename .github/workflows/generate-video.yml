@@ -142,6 +142,19 @@ jobs:
             python generate_video.py --videos "$VIDEO_COUNT"
           fi
 
+      - name: Commit private generation history
+        working-directory: private-source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add history/puzzles.jsonl history/videos.jsonl
+          if git diff --cached --quiet; then
+            echo "No private history changes."
+            exit 0
+          fi
+          git commit -m "Update number-pair generation history [skip ci]"
+          git push origin HEAD:main
+
       - name: Upload videos to YouTube
         if: env.YT_UPLOAD_ENABLED == 'true'
         working-directory: private-source
@@ -226,18 +239,6 @@ jobs:
               print(f"[youtube] https://youtu.be/{video_id}")
           PYCODE
 
-      - name: Commit private generation history
-        working-directory: private-source
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add history/puzzles.jsonl history/videos.jsonl
-          if git diff --cached --quiet; then
-            echo "No private history changes."
-            exit 0
-          fi
-          git commit -m "Update number-pair generation history [skip ci]"
-          git push origin HEAD:main
 
       - name: Commit used public title
         working-directory: runner-control
@@ -256,6 +257,7 @@ jobs:
           git push origin HEAD:main
 
       - name: Upload generated artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: number-pair-videos-${{ github.run_number }}
