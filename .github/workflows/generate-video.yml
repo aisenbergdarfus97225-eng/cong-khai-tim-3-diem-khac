@@ -2,19 +2,6 @@ name: Generate number-pair video
 
 on:
   workflow_dispatch:
-    inputs:
-      video_count:
-        description: Number of videos
-        required: false
-        default: "1"
-      seed:
-        description: Optional base seed
-        required: false
-        default: ""
-      yt_privacy_status:
-        description: YouTube privacy status
-        required: false
-        default: "private"
 
 permissions:
   contents: write
@@ -32,10 +19,12 @@ jobs:
       PRIVATE_REF: "main"
       PYTHONUNBUFFERED: "1"
       RUNNER_CONTROL_DIR: "${{ github.workspace }}/runner-control"
-      VIDEO_COUNT: "${{ github.event.inputs.video_count || '1' }}"
-      VIDEO_SEED: "${{ github.event.inputs.seed || '' }}"
-      YT_PRIVACY_STATUS: "${{ github.event.inputs.yt_privacy_status || 'private' }}"
-      YT_UPLOAD_ENABLED: "${{ secrets.YT_UPLOAD_ENABLED || 'true' }}"
+      # Edit these YAML values directly; the Run workflow form has no inputs.
+      VIDEO_COUNT: "1"       # Number of videos to produce in this workflow run.
+      GAMES_PER_VIDEO: "20"  # Number of puzzle games inside EACH video; any positive integer.
+      VIDEO_SEED: ""         # Leave blank for a random seed; set an integer to reproduce a run.
+      YT_PRIVACY_STATUS: "private"  # private, unlisted, or public.
+      YT_UPLOAD_ENABLED: "true"     # Set false to generate video/thumbs without uploading.
 
     steps:
       - name: Checkout public control repo
@@ -135,14 +124,29 @@ jobs:
         working-directory: private-source
         run: python tools/check_project.py
 
+      - name: Validate video and game counts
+        run: |
+          if ! [[ "$VIDEO_COUNT" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::VIDEO_COUNT must be a positive integer in this workflow YAML."
+            exit 1
+          fi
+          if ! [[ "$GAMES_PER_VIDEO" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::GAMES_PER_VIDEO must be a positive integer in this workflow YAML."
+            exit 1
+          fi
+          if [[ "$YT_PRIVACY_STATUS" != "private" && "$YT_PRIVACY_STATUS" != "unlisted" && "$YT_PRIVACY_STATUS" != "public" ]]; then
+            echo "::error::YT_PRIVACY_STATUS must be private, unlisted, or public."
+            exit 1
+          fi
+
       - name: Generate number-pair videos
         working-directory: private-source
         run: |
+          args=(--videos "$VIDEO_COUNT" --games "$GAMES_PER_VIDEO")
           if [ -n "$VIDEO_SEED" ]; then
-            python generate_video.py --videos "$VIDEO_COUNT" --seed "$VIDEO_SEED"
-          else
-            python generate_video.py --videos "$VIDEO_COUNT"
+            args+=(--seed "$VIDEO_SEED")
           fi
+          python generate_video.py "${args[@]}"
 
       - name: Commit private generation history
         working-directory: private-source
