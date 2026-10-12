@@ -114,6 +114,8 @@ jobs:
           test -f assets/fonts/ipaexg.ttf
           test -f assets/mascot/fox-sheet.webp
           test -f images/videonen.mp4
+          test -f thumb/kieuthumb1.png
+          test -f thumb/kieuthumb2.png
           for i in $(seq 1 10); do test -f "music/$i.mp3"; done
 
       - uses: actions/setup-python@v5
