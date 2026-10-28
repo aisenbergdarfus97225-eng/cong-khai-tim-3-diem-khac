@@ -21,7 +21,7 @@ jobs:
       RUNNER_CONTROL_DIR: "${{ github.workspace }}/runner-control"
       # Edit these YAML values directly; the Run workflow form has no inputs.
       VIDEO_COUNT: "1"       # Number of videos to produce in this workflow run.
-      GAMES_PER_VIDEO: "5"  # Number of puzzle games inside EACH video; any positive integer.
+      GAMES_PER_VIDEO: "10"  # Number of puzzle games inside EACH video; any positive integer.
       VIDEO_SEED: ""         # Leave blank for a random seed; set an integer to reproduce a run.
       YT_PRIVACY_STATUS: "private"  # private, unlisted, or public.
       YT_UPLOAD_ENABLED: "true"     # Set false to generate video/thumbs without uploading.
