@@ -16,3 +16,4 @@ jobs:
           echo "Run 'Get YouTube Refresh Token (Private)' in aisenbergdarfus97225-eng/tim-3-diem-khac."
           echo "The private workflow requires YT_CLIENT_ID and YT_CLIENT_SECRET Actions secrets in the private repository."
           echo "Then save the generated token as YT_REFRESH_TOKEN in the PUBLIC repository Actions secrets."
+          echo "::warning::A previous public run exposed a refresh-token value in its log. Revoke the old Google OAuth grant before using a replacement token."
