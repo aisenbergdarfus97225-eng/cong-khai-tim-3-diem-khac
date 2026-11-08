@@ -102,7 +102,16 @@ jobs:
           test -f history/videos.jsonl
           test -f assets/fonts/ipaexg.ttf
           test -f assets/mascot/fox-sheet.webp
-          test -f images/videonen.mp4
+          if [ -f images/videonen.mp4 ]; then
+            echo "Using fallback background: images/videonen.mp4"
+          else
+            for i in $(seq 1 10); do
+              if [ ! -f "images/$i.mp4" ]; then
+                echo "::error::Missing background asset: images/$i.mp4 (or images/videonen.mp4 fallback)"
+                exit 1
+              fi
+            done
+          fi
           test -f thumb/kieuthumb1.png
           test -f thumb/kieuthumb2.png
           for i in $(seq 1 10); do test -f "music/$i.mp3"; done
