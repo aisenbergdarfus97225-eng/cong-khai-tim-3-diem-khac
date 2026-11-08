@@ -21,7 +21,7 @@ jobs:
       RUNNER_CONTROL_DIR: "${{ github.workspace }}/runner-control"
       # Edit these YAML values directly; the Run workflow form has no inputs.
       VIDEO_COUNT: "1"       # Number of videos to produce in this workflow run.
-      GAMES_PER_VIDEO: "20"  # Number of puzzle games inside EACH video; any positive integer.
+      GAMES_PER_VIDEO: "30"  # Number of puzzle games inside EACH video; allowed range 1-30.
       VIDEO_SEED: ""         # Leave blank for a random seed; set an integer to reproduce a run.
       YT_PRIVACY_STATUS: "private"  # private, unlisted, or public.
       YT_UPLOAD_ENABLED: "true"     # Set false to generate video/thumbs without uploading.
@@ -140,7 +140,11 @@ jobs:
             exit 1
           fi
           if ! [[ "$GAMES_PER_VIDEO" =~ ^[1-9][0-9]*$ ]]; then
-            echo "::error::GAMES_PER_VIDEO must be a positive integer in this workflow YAML."
+            echo "::error::GAMES_PER_VIDEO must be an integer from 1 to 30."
+            exit 1
+          fi
+          if (( GAMES_PER_VIDEO > 30 )); then
+            echo "::error::GAMES_PER_VIDEO cannot exceed 30."
             exit 1
           fi
           if [[ "$YT_PRIVACY_STATUS" != "private" && "$YT_PRIVACY_STATUS" != "unlisted" && "$YT_PRIVACY_STATUS" != "public" ]]; then
